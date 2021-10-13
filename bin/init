@@ -1,0 +1,42 @@
+#!/usr/bin/env node
+
+const program = require('commander');
+const ora = require('ora');
+const download = require('download-git-repo');
+const symbols = require('log-symbols');
+const chalk = require('chalk');
+
+chalk.level = 1;
+
+if (program.args.length < 2) return help();
+
+function help() {
+  console.log('Usage: react-cli init <app-name>');
+  console.log(`\n   ${chalk.red('Missing required argument')} ${chalk.yellow('<app-name>')}${chalk.red('.')}`);
+}
+
+const url = 'git@github.com:xlz122/react-cli-template.git';
+
+const projectName = program.args[1];
+
+const downloadOptions = {
+  clone: true
+};
+
+console.log(chalk.green('\n Start generating... \n'));
+// 出现加载图标
+const spinner = ora('Downloading...');
+spinner.start();
+
+download(`direct:${url}`, `./${projectName}`, downloadOptions, (err) => {
+  if (err) {
+    spinner.fail();
+    console.log(chalk.red(symbols.error), chalk.red(`Generation failed. ${err}`));
+    return
+  }
+  // 结束加载图标
+  spinner.succeed();
+  console.log(chalk.green(symbols.success), chalk.green('Generation completed!'));
+  console.log('\n To get started');
+  console.log(`\n    cd ${projectName} \n`);
+});
