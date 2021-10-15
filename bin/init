@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
+const fs = require('fs-extra');
+const path = require('path');
 const program = require('commander');
+const inquirer = require('inquirer');
 const ora = require('ora');
 const download = require('download-git-repo');
 const symbols = require('log-symbols');
@@ -8,35 +11,63 @@ const chalk = require('chalk');
 
 chalk.level = 1;
 
-if (program.args.length < 2) return help();
-
 function help() {
   console.log('Usage: react-cli init <app-name>');
   console.log(`\n   ${chalk.red('Missing required argument')} ${chalk.yellow('<app-name>')}${chalk.red('.')}`);
 }
 
-const url = 'git@github.com:xlz122/react-cli-template.git';
+if (program.args.length < 2) return help();
 
 const projectName = program.args[1];
 
-const downloadOptions = {
-  clone: true
-};
+const cwd = process.cwd();
+const targetDir = path.resolve(cwd, projectName || '.');
 
-console.log(chalk.green('\n Start generating... \n'));
-// 出现加载图标
-const spinner = ora('Downloading...');
-spinner.start();
+if (fs.existsSync(targetDir)) {
+  (async () => {
+    const { action } = await inquirer.prompt([
+      {
+        name: 'action',
+        type: 'list',
+        message: `Target directory ${chalk.cyan(targetDir)} already exists. Pick an action:`,
+        choices: [
+          { name: 'Overwrite', value: 'overwrite' },
+          { name: 'Cancel', value: false }
+        ]
+      }
+    ]);
+  
+    if (!action) {
+      return false;
+    } else if (action === 'overwrite') {
+      console.log(`\nRemoving ${chalk.cyan(targetDir)}...`);
+      await fs.remove(targetDir);
+    }
+  
+    return downloadAndGenerate();
+  })();
+} else {
+  downloadAndGenerate();
+}
 
-download(`direct:${url}`, `./${projectName}`, downloadOptions, (err) => {
-  if (err) {
-    spinner.fail();
-    console.log(chalk.red(symbols.error), chalk.red(`Generation failed. ${err}`));
-    return
-  }
-  // 结束加载图标
-  spinner.succeed();
-  console.log(chalk.green(symbols.success), chalk.green('Generation completed!'));
-  console.log('\n To get started');
-  console.log(`\n    cd ${projectName} \n`);
-});
+function downloadAndGenerate() {
+  const url = 'git@github.com:xlz122/react-cli-template.git';
+
+  console.log(chalk.green('\n Start generating... \n'));
+  // 出现加载图标
+  const spinner = ora('Downloading...');
+  spinner.start();
+
+  download(`direct:${url}`, `./${projectName}`, { clone: true }, (err) => {
+    if (err) {
+      spinner.fail();
+      console.log(chalk.red(symbols.error), chalk.red(`Generation failed. ${err}`));
+      return
+    }
+    // 结束加载图标
+    spinner.succeed();
+    console.log(chalk.green(symbols.success), chalk.green('Generation completed!'));
+    console.log('\n To get started');
+    console.log(`\n    cd ${projectName} \n`);
+  });
+}
